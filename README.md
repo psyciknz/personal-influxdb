@@ -40,6 +40,28 @@ $ pip3 install pytz influxdb requests requests-cache instaloader trakt.py public
 
 Run each Python script from the terminal and it will insert the most recent data into InfluxDB.
 
+## Usage (Docker)
+
+For running the trakt-tv script via docker.   This assumes a valid environment file with variables in it, see below.
+
+```
+docker run -i --env-file <name of .env file> <image location> python ./trakt-tv.py
+```
+
+Docker Envrionment file can contain specific variables rather than updating a config.py
+
+```
+TIMEZONE=America/New_York
+TRAKT-CLIENT-ID=<your trakt key here>
+TRAKT-CLIENT-SECRET=<your trakt key here>
+INFLUX-HOST=
+INFLUX-PORT=
+INFLUX-USER=
+INFLUX-PWD=
+```
+
+
+
 ## Notes
 
 * Each script is designed to write to its own InfluxDB database.  Using the same database name between scripts can lead to data being unexpectedly overwritten or deleted.

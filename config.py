@@ -14,16 +14,17 @@
 # limitations under the License.
 
 import sys, logging, colorlog, pytz
+import os
 from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 
-LOCAL_TIMEZONE = pytz.timezone('America/New_York')
+LOCAL_TIMEZONE = pytz.timezone(os.environ.get('TIMEZONE','America/New_York'))
 
 # InfluxDB Configuration
-INFLUXDB_HOST = 'localhost'
-INFLUXDB_PORT = 8086
-INFLUXDB_USERNAME = 'root'
-INFLUXDB_PASSWORD = 'root'
+INFLUXDB_HOST =  os.environ.get('INFLUX-HOST','localhost')
+INFLUXDB_PORT =  os.environ.get('INFLUX-PORT',8086)
+INFLUXDB_USERNAME = os.environ.get('INFLUX-USER','root')
+INFLUXDB_PASSWORD = os.environ.get('INFLUX-PWD','root')
 INFLUXDB_CHUNK_SIZE = 50 # How many points to send per request
 
 # Shared gaming database
@@ -133,8 +134,8 @@ TODOIST_ACCESS_TOKEN = ''
 TODOIST_DATABASE = 'todoist'
 
 # Trakt.tv configuration
-TRAKT_CLIENT_ID = ''
-TRAKT_CLIENT_SECRET = ''
+TRAKT_CLIENT_ID = os.environ.get('TRAKT-CLIENT-ID','')
+TRAKT_CLIENT_SECRET = os.environ.get('TRAKT-CLIENT-SECRET','')
 TRAKT_OAUTH_CODE = ''
 TMDB_API_KEY = ''
 TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/'
