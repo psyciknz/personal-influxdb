@@ -64,6 +64,7 @@ else:
 
 Trakt.configuration.defaults.oauth.from_response(auth)
 
+#Change to configurable start date.
 for item in Trakt['sync/history'].get(pagination=True, per_page=100, start_at=datetime(date.today().year, date.today().month, 1), extended='full'):
 	if item.action == "watch":
 		if isinstance(item, Episode):
