@@ -45,7 +45,7 @@ Run each Python script from the terminal and it will insert the most recent data
 For running the trakt-tv script via docker.   This assumes a valid environment file with variables in it, see below.
 
 ```
-docker run -i --env-file <name of .env file> <image location> python ./trakt-tv.py
+docker run -i --env-file <name of .env file> <image location> python ./trakt-tv.py [date - optional Y-M-D]
 ```
 
 Docker Envrionment file can contain specific variables rather than updating a config.py
