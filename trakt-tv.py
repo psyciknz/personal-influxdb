@@ -29,7 +29,7 @@ posters = {}
 def fetch_poster(type, tmdb_id):
 	if tmdb_id == None:
 		return None
-	logging.debug("Fetching poster for type=%s id=%s", type, tmdb_id)
+	logging.info("Fetching poster for type=%s id=%s", type, tmdb_id)
 	try:
 		with requests_cache.enabled('tmdb'):
 			response = requests.get(f'https://api.themoviedb.org/3/{type}/{tmdb_id}', 
@@ -44,6 +44,11 @@ def fetch_poster(type, tmdb_id):
 		return TMDB_IMAGE_BASE + 'w154' + data['poster_path']
 	else:
 		return None
+if len(sys.argv) > 1:
+	xDate = sys.argv[1]
+	start_date = datetime.strptime(xDate, '%Y-%m-%d').date()
+else:
+	start_date = datetime(date.today().year, date.today().month, 1)
 
 connect(TRAKT_DATABASE)
 
@@ -51,7 +56,7 @@ Trakt.configuration.defaults.client(
 	id=TRAKT_CLIENT_ID,
 	secret=TRAKT_CLIENT_SECRET
 )
-
+logging.info("connecting to trakt")
 script_dir = os.path.dirname(__file__)
 oauth_config_file = os.path.join(script_dir, '.trakt.json')
 if not os.path.exists(oauth_config_file):
@@ -64,10 +69,14 @@ else:
 
 Trakt.configuration.defaults.oauth.from_response(auth)
 
+logging.info("connected to trakt, getting entries from %s" % start_date) 
+
 #Change to configurable start date.
-for item in Trakt['sync/history'].get(pagination=True, per_page=100, start_at=datetime(date.today().year, date.today().month, 1), extended='full'):
-	if item.action == "watch":
+for item in Trakt['sync/history'].get(pagination=True, per_page=100, start_at=start_date, extended='full'):
+	logging.info("Item: %s (%s)" % (item, item.action))
+	if (item.action == "watch" or item.action == "checkin" or item.action =="scrobble"):
 		if isinstance(item, Episode):
+			logging.info("Found episode: %s" % item.show.title) 
 			if not item.show.get_key('tmdb') in posters:
 				posters[item.show.get_key('tmdb')] = fetch_poster('tv', item.show.get_key('tmdb'))
 			if posters[item.show.get_key('tmdb')] == None:
@@ -96,7 +105,9 @@ for item in Trakt['sync/history'].get(pagination=True, per_page=100, start_at=da
 					"episode_url": f"https://trakt.tv/shows/{item.show.get_key('slug')}/seasons/{item.pk[0]}/episodes/{item.pk[1]}"
 				}
 			})
-		if isinstance(item, Movie):
+		elif isinstance(item, Movie):
+			logging.info("Found movie: %s" % item) 
+
 			if not item.get_key('tmdb') in posters:
 				posters[item.get_key('tmdb')] = fetch_poster('movie', item.get_key('tmdb'))
 			if posters[item.get_key('tmdb')] == None:
@@ -120,8 +131,9 @@ for item in Trakt['sync/history'].get(pagination=True, per_page=100, start_at=da
 					"url": f"https://trakt.tv/movie/{item.get_key('slug')}"
 				}
 			})
-
-		if len(points) >= 5000:
+		else:
+			logging.info("Couldn't determine type from %s" % item)
+		if len(points) >= 500:
 			write_points(points)
 			points = []
 

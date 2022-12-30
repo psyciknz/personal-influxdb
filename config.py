@@ -147,7 +147,7 @@ TRUE_ACHIEVEMENTS_ID = ''
 XBOX_DATABASE = GAMING_DATABASE
 
 # Logging configuration
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
 LOG_FORMAT = '%(asctime)s %(log_color)s%(message)s'
 LOG_COLORS = {
     'WARNING':  'yellow',
@@ -165,6 +165,8 @@ def connect(db):
     except InfluxDBClientError as err:
         logging.error("InfluxDB connection failed: %s", err)
         sys.exit(1)
+    logging.info("Connected to %s:%s", INFLUXDB_HOST, INFLUXDB_PORT)
+    
     return client
 
 def write_points(points):
