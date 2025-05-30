@@ -21,11 +21,12 @@ from influxdb.exceptions import InfluxDBClientError
 LOCAL_TIMEZONE = pytz.timezone(os.environ.get('TIMEZONE','America/New_York'))
 
 # InfluxDB Configuration
-INFLUXDB_HOST =  os.environ.get('INFLUX-HOST','localhost')
-INFLUXDB_PORT =  os.environ.get('INFLUX-PORT',8086)
-INFLUXDB_USERNAME = os.environ.get('INFLUX-USER','root')
-INFLUXDB_PASSWORD = os.environ.get('INFLUX-PWD','root')
+INFLUXDB_HOST =  os.environ.get('INFLUX_HOST','localhost')
+INFLUXDB_PORT =  os.environ.get('INFLUX_PORT',8086)
+INFLUXDB_USERNAME = os.environ.get('INFLUX_USER','root')
+INFLUXDB_PASSWORD = os.environ.get('INFLUX_PWD','root')
 INFLUXDB_CHUNK_SIZE = 50 # How many points to send per request
+#select * from watch where "show" = 'Modern Family' AND "season" = '4' AND episode = '1'
 
 # Shared gaming database
 GAMING_DATABASE = 'gaming'
@@ -134,10 +135,10 @@ TODOIST_ACCESS_TOKEN = ''
 TODOIST_DATABASE = 'todoist'
 
 # Trakt.tv configuration
-TRAKT_CLIENT_ID = os.environ.get('TRAKT-CLIENT-ID','')
-TRAKT_CLIENT_SECRET = os.environ.get('TRAKT-CLIENT-SECRET','')
-TRAKT_OAUTH_CODE = ''
-TMDB_API_KEY = ''
+TRAKT_CLIENT_ID = os.environ.get('TRAKT_CLIENT_ID','')
+TRAKT_CLIENT_SECRET = os.environ.get('TRAKT_CLIENT_SECRET','')
+TRAKT_OAUTH_CODE = '08E411B7'
+TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/'
 TRAKT_DATABASE = 'trakt'
 

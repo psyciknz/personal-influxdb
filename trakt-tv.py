@@ -18,6 +18,9 @@ from datetime import datetime, date
 from trakt import Trakt
 from trakt.objects import Episode, Movie
 from config import *
+import dotenv
+
+
 
 if not TRAKT_CLIENT_ID:
     logging.error("TRAKT_CLIENT_ID not set in config.py")
@@ -60,6 +63,9 @@ logging.info("connecting to trakt")
 script_dir = os.path.dirname(__file__)
 oauth_config_file = os.path.join(script_dir, '.trakt.json')
 if not os.path.exists(oauth_config_file):
+	if TRAKT_OAUTH_CODE is None:
+		raise ValueError("Trakt Auth Code has not been defined.  Navigate to the API page for your credentials and click the Green Authorise button")
+    
 	auth = Trakt['oauth'].token_exchange(TRAKT_OAUTH_CODE, 'urn:ietf:wg:oauth:2.0:oob')
 	with open(oauth_config_file, 'w') as outfile:
 		json.dump(auth, outfile)
@@ -71,8 +77,12 @@ Trakt.configuration.defaults.oauth.from_response(auth)
 
 logging.info("connected to trakt, getting entries from %s" % start_date) 
 
+if auth is None:
+	raise ValueError("Could not Auth to trakt")
+
 #Change to configurable start date.
-for item in Trakt['sync/history'].get(pagination=True, per_page=100, start_at=start_date, extended='full'):
+traktHistory = Trakt['sync/history/'].get(pagination=True, per_page=100, start_at=start_date, extended='full')
+for item in traktHistory:
 	logging.info("Item: %s (%s)" % (item, item.action))
 	if (item.action == "watch" or item.action == "checkin" or item.action =="scrobble"):
 		if isinstance(item, Episode):

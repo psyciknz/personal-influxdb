@@ -136,3 +136,7 @@ dmypy.json
 .vscode
 .librelinkup-authtoken
 build.sh
+log.json
+log.txt
+auth.json
+.sync-exclude.lst
