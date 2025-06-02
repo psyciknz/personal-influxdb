@@ -137,7 +137,7 @@ TODOIST_DATABASE = 'todoist'
 # Trakt.tv configuration
 TRAKT_CLIENT_ID = os.environ.get('TRAKT_CLIENT_ID','')
 TRAKT_CLIENT_SECRET = os.environ.get('TRAKT_CLIENT_SECRET','')
-TRAKT_OAUTH_CODE = '08E411B7'
+TRAKT_OAUTH_CODE = os.environ.get('TRAKT_OAUTH_CODE')
 TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/'
 TRAKT_DATABASE = 'trakt'
