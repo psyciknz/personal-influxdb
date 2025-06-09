@@ -16,6 +16,7 @@
 import requests, requests_cache, sys, os, json
 from datetime import datetime, date
 from config import *
+import csv
 import dotenv
 import time
 from threading import Condition
@@ -45,17 +46,107 @@ class Application(object):
         with open(json_file) as json_file:
             json_data = json.load(json_file)
             json_file.close()
-            
-        self.process_ryot_media('book',json_data)
         
-    def process_ryot_media(self,type,json_data ):
+        goodreads = self.process_goodreads_media('goodreads_library_export.csv')  
+        goodreads_json = self.goodreads_to_ryot_json(goodreads)  
+        self.process_ryot_media('book',json_data, goodreads_json)
+        
+    def process_ryot_media(self,type,json_data, goodreads ):
         for item in json_data['media']:
             print(item)
             if item['lot'] == type:
                 print("book")
+                title = item["source_id"]
+                if title in goodreads:
+                    book = goodreads[title]
+                else:
+                    for bitem in goodreads:
+                        if title in bitem:
+                            book = goodreads[bitem]
+                
                     
+                self.points.append({
+                    "measurement": "book",
+                    "time": 1,
+                    "tags": {
+                        "id": item["idecntifier"],
+                        "source": item["source"],
+                        "author": book["Author"] or ""
+                    },
+                    "fields": {
+                        "title": item["source_id"],
+                        "isbn10": book["ISBN"],
+                        "isbn13":book["ISBN13"],
+                        "pages": book["Number of Pages"]
+                    }
+                })
+                
                     
+    def process_goodreads_media(self,goodreads):
+        with open(goodreads, mode='r', newline='', encoding='utf-8') as csv_file:
+            # Create a CSV reader object
+            csv_reader = csv.DictReader(csv_file)
+            
+            # Read all rows from the CSV
+            rows = list(csv_reader)
+            
+            # Convert the rows to JSON
+            json_data = json.dumps(rows, indent=4)
+            #print(json_data)
+            # Write JSON data to a file
+            #with open(json_file_path, mode='w', encoding='utf-8') as json_file:
+            #    json_file.write(json_data)
+                
+            #print(f"CSV data has been converted to JSON and saved to {json_file_path}")
+        return json_data
+
+        good_reads_data_dict = csv_to_json(goodreads)  
+                      
+    def goodreads_to_ryot_json(self,goodreads_json):
+        json_data = json.loads(goodreads_json)
+
+        #region goodreads csv to json source
+        # {
+        #     "Book Id": "17167572",
+        #     "Title": "The Long War (The Long Earth, #2)",
+        #     "Author": "Terry Pratchett",
+        #     "Author l-f": "Pratchett, Terry",
+        #     "Additional Authors": "Stephen Baxter",
+        #     "ISBN": "=\"006206777X\"",
+        #     "ISBN13": "=\"9780062067777\"",
+        #     "My Rating": "0",
+        #     "Average Rating": "3.64",
+        #     "Publisher": "HarperCollins Publishers",
+        #     "Binding": "Hardcover",
+        #     "Number of Pages": "419",
+        #     "Year Published": "2013",
+        #     "Original Publication Year": "2013",
+        #     "Date Read": "",
+        #     "Date Added": "2021/07/06",
+        #     "Bookshelves": "to-read",
+        #     "Bookshelves with positions": "to-read (#13)",
+        #     "Exclusive Shelf": "to-read",
+        #     "My Review": "",
+        #     "Spoiler": "",
+        #     "Private Notes": "",
+        #     "Read Count": "0",
+        #     "Owned Copies": "0"
+        # }
+
     
+        filtered_data = [record for record in json_data if record.get('Exclusive Shelf') == "read"]
+
+        new_goodread_records = {}
+
+        for record in filtered_data:
+            title = record["Title"]
+            new_goodread_records[title] = record
+            
+            author = record["Author"]
+            goodreads = record["Book Id"]
+            
+        return new_goodread_records
+            
         
     def process_trakt_history(self,start_date):
         with Trakt.configuration.oauth.from_response(self.authorization):
