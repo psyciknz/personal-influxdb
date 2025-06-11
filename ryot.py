@@ -62,14 +62,53 @@ class Application(object):
                 book["ISBN13"] = "unknown"
                 book["Number of Pages"] = 0
                 title = item["source_id"]
+                titlesearch = self.titlereplace(title)
+                titlebits = titlesearch.split(' ')
                 if "Attack of the Seawolf" in title:
                     print("found")
                 if title in goodreads:
-                    book = goodreads[title]
+                    book = goodreads[titlesearch]
                 else:
                     for bitem in goodreads:
-                        if title in bitem:
+                        bitembits = self.titlereplace(bitem).split(' ')
+                        if titlesearch in bitem:
                             book = goodreads[bitem]
+                            break
+                        #else:
+                        #    ss = set(titlebits) 
+                        #    fs = set(bitembits)
+                        #    ssfs = ss.intersection(fs)
+                        #    if len(ssfs)/len(titlebits) >= .75:
+                        #        book = goodreads[bitem]
+                        
+                if book["Author"] == "unknown":
+                    for bitem in goodreads:
+                        bitembits = self.titlereplace(bitem).split(' ')
+                        aitembits = (bitem + " " + self.titlereplace(goodreads[bitem]["Author"])).split(' ')
+                        
+                        toremovelist = ["the","a","of",'']
+                        toremoveset = set(toremovelist)
+                        ss = set(titlebits) -toremoveset
+                        fs = set(bitembits)-toremoveset
+                        afs = set(aitembits)-toremoveset
+                        ssfs = ss.intersection(fs)
+                        ssfspct = len(ssfs)/len(titlebits) 
+                        assfs = ss.intersection(afs)
+                        assfspct = len(assfs)/len(titlebits)
+                        if ssfspct  >= .60:
+                            book = goodreads[bitem]
+                            break
+                        elif assfspct >= .60:
+                            book = goodreads[bitem]
+                            break
+                        elif ssfspct  >= .50:
+                            book = goodreads[bitem]
+                            break
+                        elif ssfspct  >= .3:
+                            print("partial")
+                            break
+                        
+                    print("not found")
                             
                 if "collections" in item and "Watchlist" in item["collections"]:
                     measurement = "watchlist"
@@ -86,13 +125,15 @@ class Application(object):
                     "tags": {
                         "id": item["identifier"],
                         "source": item["source"],
-                        "author": book["Author"] 
+                        "author": book["Author"]
+                        
                     },
                     "fields": {
                         "title": item["source_id"],
                         "isbn10": book["ISBN"],
                         "isbn13":book["ISBN13"],
-                        "pages": pages
+                        "pages": pages,
+                        "goodreads": book["Book Id"] 
                         
                     }
                 }
@@ -125,6 +166,10 @@ class Application(object):
         write_points(self.points)      
     #def process_ryot_media(self,type,json_data, goodreads ):
     
+    def titlereplace(self,title):
+        newtitle = title.lower().replace(':','').replace('\'','').replace('#','').replace('(','').replace(")",'').replace('-','')
+        newtitle = newtitle.replace("iii",'3').replace('ii','2').replace(',','').replace('.','').replace("/",'').replace("\"",'')
+        return newtitle
                     
     def process_goodreads_media(self,goodreads):
         with open(goodreads, mode='r', newline='', encoding='utf-8') as csv_file:
@@ -185,7 +230,7 @@ class Application(object):
         new_goodread_records = {}
 
         for record in json_data:
-            title = record["Title"]
+            title = self.titlereplace(record["Title"])
             new_goodread_records[title] = record
             
             author = record["Author"]
