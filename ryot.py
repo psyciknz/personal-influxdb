@@ -37,7 +37,7 @@ class Application(object):
         self.posters = {}
 
         
-    def run(self,json_file):
+    def run(self,json_file, goodreads_file):
        
         connect(TRAKT_DATABASE)
 
@@ -47,7 +47,7 @@ class Application(object):
             json_data = json.load(json_file)
             json_file.close()
         
-        goodreads = self.process_goodreads_media('goodreads_library_export.csv')  
+        goodreads = self.process_goodreads_media(goodreads_file)  
         goodreads_json = self.goodreads_to_ryot_json(goodreads)  
         self.process_ryot_media('book',json_data, goodreads_json)
         
@@ -56,31 +56,75 @@ class Application(object):
             print(item)
             if item['lot'] == type:
                 print("book")
+                book = {}
+                book["Author"] = "unknown"
+                book["ISBN"] = "unknown"
+                book["ISBN13"] = "unknown"
+                book["Number of Pages"] = 0
                 title = item["source_id"]
+                if "Attack of the Seawolf" in title:
+                    print("found")
                 if title in goodreads:
                     book = goodreads[title]
                 else:
                     for bitem in goodreads:
                         if title in bitem:
                             book = goodreads[bitem]
-                
+                            
+                if "collections" in item and "Watchlist" in item["collections"]:
+                    measurement = "watchlist"
+                else:
+                    measurement = "book"
                     
-                self.points.append({
-                    "measurement": "book",
-                    "time": 1,
+                try:
+                    pages = int(book["Number of Pages"])
+                except:
+                    pages = 0
+                
+                bookpoint = {
+                    "measurement": measurement,
                     "tags": {
-                        "id": item["idecntifier"],
+                        "id": item["identifier"],
                         "source": item["source"],
-                        "author": book["Author"] or ""
+                        "author": book["Author"] 
                     },
                     "fields": {
                         "title": item["source_id"],
                         "isbn10": book["ISBN"],
                         "isbn13":book["ISBN13"],
-                        "pages": book["Number of Pages"]
+                        "pages": pages
+                        
                     }
-                })
+                }
+                import copy
+                bTime = None
+                if "seen_history" in item:
+                    for history in item["seen_history"]:
+                        if "ended_on" in history:
+                            bTime = history["ended_on"]
+                            bookpoint["time"] = bTime
+                            self.points.append(bookpoint)
+                            bookpoint = copy.deepcopy(bookpoint)
                 
+                if "reviews" in item and len(item["reviews"]) > 0 and bTime is None:
+                    for history in item["reviews"]:   
+                         if "review" in history and "date" in history["review"]:
+                            bTime = history["review"]["date"]
+                            bookpoint["time"] = bTime
+                            self.points.append(bookpoint)
+                            bookpoint = copy.deepcopy(bookpoint)
+                else:
+                    self.points.append(bookpoint)
+                    bookpoint = copy.deepcopy(bookpoint)
+            #if item['lot'] == type:
+            
+            if len(self.points) >= 500:
+                write_points(self.points)
+                self.points = []
+        #for item in json_data['media']:
+        write_points(self.points)      
+    #def process_ryot_media(self,type,json_data, goodreads ):
+    
                     
     def process_goodreads_media(self,goodreads):
         with open(goodreads, mode='r', newline='', encoding='utf-8') as csv_file:
@@ -101,7 +145,9 @@ class Application(object):
         return json_data
 
         good_reads_data_dict = csv_to_json(goodreads)  
-                      
+    #def process_goodreads_media(self,goodreads):
+    
+                   
     def goodreads_to_ryot_json(self,goodreads_json):
         json_data = json.loads(goodreads_json)
 
@@ -138,7 +184,7 @@ class Application(object):
 
         new_goodread_records = {}
 
-        for record in filtered_data:
+        for record in json_data:
             title = record["Title"]
             new_goodread_records[title] = record
             
@@ -146,7 +192,7 @@ class Application(object):
             goodreads = record["Book Id"]
             
         return new_goodread_records
-            
+    #def goodreads_to_ryot_json(self,goodreads_json):       
         
     def process_trakt_history(self,start_date):
         with Trakt.configuration.oauth.from_response(self.authorization):
@@ -226,12 +272,18 @@ class Application(object):
 if __name__ == '__main__':
     # Configure
     
-    if len(sys.argv) > 1:
+    if len(sys.argv) >= 1:
         json_file= sys.argv[1]
         if not os.path.exists(json_file):
             print(f"File {json_file} does not exist")
             sys.exit(4)
             
+    if len(sys.argv) >= 2:
+        goodreads_file= sys.argv[2]
+        if not os.path.exists(goodreads_file):
+            print(f"File {goodreads_file} does not exist")
+            sys.exit(4)
+            
     
     app = Application()
-    app.run(json_file)
+    app.run(json_file,goodreads_file)
