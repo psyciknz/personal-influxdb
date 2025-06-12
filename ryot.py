@@ -48,10 +48,11 @@ class Application(object):
             json_file.close()
         
         goodreads = self.process_goodreads_media(goodreads_file)  
-        goodreads_json = self.goodreads_to_ryot_json(goodreads)  
-        self.process_ryot_media('book',json_data, goodreads_json)
+        goodreads_json,goodreads_ids = self.goodreads_to_ryot_json(goodreads)  
+        self.process_ryot_media('book',json_data, goodreads_json,goodreads_ids)
         
-    def process_ryot_media(self,type,json_data, goodreads ):
+    def process_ryot_media(self,type,json_data, goodreads,goodreads_ids ):
+        unknowns = []
         for item in json_data['media']:
             print(item)
             if item['lot'] == type:
@@ -66,7 +67,10 @@ class Application(object):
                 titlebits = titlesearch.split(' ')
                 if "Attack of the Seawolf" in title:
                     print("found")
-                if title in goodreads:
+                if "goodreads" in item:
+                    titlesearch = goodreads_ids[str(item["goodreads"])]
+                    
+                if titlesearch in goodreads:
                     book = goodreads[titlesearch]
                 else:
                     for bitem in goodreads:
@@ -102,13 +106,18 @@ class Application(object):
                             book = goodreads[bitem]
                             break
                         elif ssfspct  >= .50:
-                            book = goodreads[bitem]
+                            #book = goodreads[bitem]
+                            print("partial")
                             break
                         elif ssfspct  >= .3:
                             print("partial")
                             break
                         
+                if book["Author"] == "unknown":
+                    unknowns.append(item)
                     print("not found")
+                    continue
+                    
                             
                 if "collections" in item and "Watchlist" in item["collections"]:
                     measurement = "watchlist"
@@ -163,7 +172,8 @@ class Application(object):
                 write_points(self.points)
                 self.points = []
         #for item in json_data['media']:
-        write_points(self.points)      
+        write_points(self.points)
+        self.write_unknowns(unknowns)      
     #def process_ryot_media(self,type,json_data, goodreads ):
     
     def titlereplace(self,title):
@@ -228,90 +238,24 @@ class Application(object):
         filtered_data = [record for record in json_data if record.get('Exclusive Shelf') == "read"]
 
         new_goodread_records = {}
+        new_goodread_ids = {}
 
         for record in json_data:
             title = self.titlereplace(record["Title"])
             new_goodread_records[title] = record
+            new_goodread_ids[record["Book Id"]] =title
             
             author = record["Author"]
             goodreads = record["Book Id"]
             
-        return new_goodread_records
+        return new_goodread_records,new_goodread_ids
     #def goodreads_to_ryot_json(self,goodreads_json):       
+    
+    def write_unknowns(self,unknowns):
+        with open('unknown.json','w') as file:
+            json.dump(unknowns, file, indent = 4)
         
-    def process_trakt_history(self,start_date):
-        with Trakt.configuration.oauth.from_response(self.authorization):
-            traktHistory = Trakt['sync/history/'].get(pagination=True, per_page=100, start_at=start_date, extended='full')
-            for item in traktHistory:
-                logging.info("Item: %s (%s)" % (item, item.action))
-                if (item.action == "watch" or item.action == "checkin" or item.action =="scrobble"):
-                    if isinstance(item, Episode):
-                        logging.info("Found episode: %s" % item.show.title) 
-                        if not item.show.get_key('tmdb') in self.posters:
-                            self.posters[item.show.get_key('tmdb')] = self.fetch_poster('tv', item.show.get_key('tmdb'))
-                        if self.posters[item.show.get_key('tmdb')] == None:
-                            html = None
-                        else:
-                            html = '<img src="' + self.posters[item.show.get_key('tmdb')] + '"/>'
-                        self.points.append({
-                            "measurement": "watch",
-                            "time": item.watched_at.isoformat(),
-                            "tags": {
-                                "id": item.get_key('trakt'),
-                                "show": item.show.title,
-                                "show_id": item.show.get_key('trakt'),
-                                "season": item.pk[0],
-                                "episode": item.pk[1],
-                                "type": "episode"
-                            },
-                            "fields": {
-                                "title": item.title,
-                                "tmdb_id": item.show.get_key('tmdb'),
-                                "duration": item.show.runtime,
-                                "poster": self.posters[item.show.get_key('tmdb')],
-                                "poster_html": html,
-                                "slug": item.show.get_key('slug'),
-                                "url": f"https://trakt.tv/shows/{item.show.get_key('slug')}",
-                                "episode_url": f"https://trakt.tv/shows/{item.show.get_key('slug')}/seasons/{item.pk[0]}/episodes/{item.pk[1]}"
-                            }
-                        })
-                    elif isinstance(item, Movie):
-                        logging.info("Found movie: %s" % item) 
-
-                        if not item.get_key('tmdb') in self.posters:
-                            self.posters[item.get_key('tmdb')] = self.fetch_poster('movie', item.get_key('tmdb'))
-                        if self.posters[item.get_key('tmdb')] == None:
-                            html = None
-                        else:
-                            html = f'<img src="{self.posters[item.get_key("tmdb")]}"/>'
-                        self.points.append({
-                            "measurement": "watch",
-                            "time": item.watched_at.isoformat(),
-                            "tags": {
-                                "id": item.get_key('trakt'),
-                                "type": "movie"
-                            },
-                            "fields": {
-                                "title": item.title,
-                                "tmdb_id": item.get_key('tmdb'),
-                                "duration": item.runtime,
-                                "poster": self.posters[item.get_key('tmdb')],
-                                "poster_html": html,
-                                "slug": item.get_key('slug'),
-                                "url": f"https://trakt.tv/movie/{item.get_key('slug')}"
-                            }
-                        })
-                    else:
-                        logging.info("Couldn't determine type from %s" % item)
-                    if len(self.points) >= 500:
-                        write_points(self.points)
-                        self.points = []
-
-        write_points(self.points)
-    #def process_trakt_history(self,start_date):
-
-
-
+   
 
 
 if __name__ == '__main__':
